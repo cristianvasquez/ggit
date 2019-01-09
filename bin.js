@@ -6,6 +6,8 @@ const program = require('commander');
 const cmd = require('node-cmd');
 const pjson = require('./package.json');
 
+const HOME = '/home/cvasquez/';
+
 program
     .version(pjson.version, '-v, --version');
 
@@ -51,27 +53,38 @@ program
     .command('clone <repository>')
     .description('clone a repo from github')
     .action(function(repo, options){
-        if (!repo.startsWith("https://github.com")){
-            throw Error("Only from github");
+
+        if (repo.startsWith("https://github.com")){
+            let destinationDir = repo.replace('https://', HOME).replace('.git', '');
+            cloneDir(repo, destinationDir);
+        } else if (repo.startsWith("git@gitlab.ilabt.imec.be")) {
+            let destinationDir = repo.replace('git@', HOME).replace('.git', '');
+            cloneDir(repo, destinationDir);
+        } else {
+            throw Error("Only from github or gitlab");
         }
-        let dir = pop(repo).replace('https://','/home/cvasquez/');
-        console.log(dir);
-        cmd.get(
-            `
-            mkdir -p ${dir}
-            cd ${dir}
-            git clone ${repo}
-            ls
-            `,
-            function(err, data, stderr){
-                if (!err) {
-                    console.log('Done:\n',data)
-                } else {
-                    console.log('error',err)
-                }
-            }
-        );
     });
+
+function cloneDir(repo, destinationDir) {
+    let userDir = pop(destinationDir);
+    console.log(`cloning into:\n${destinationDir}`);
+    cmd.get(
+        `
+            mkdir -p ${userDir}
+            cd ${userDir}
+            git clone ${repo}
+            cd ${destinationDir}
+            `,
+        function (err, data, stderr) {
+            if (!err) {
+                console.log('Done\n', data);
+            } else {
+                console.log('error', err);
+            }
+        }
+    );
+}
+
 
 function pop(string){
     return string.substr(0, string.lastIndexOf('/'));
